@@ -100,4 +100,4 @@ def learn_doom(agent, env, episodes=10000, render=False,
 
     for episode in xrange(episodes):
         epsilon = get_epsilon(episode)
-        learning_rate = get_epsilon(episode)
+        learning_rate = get_learning_rate(episode)
