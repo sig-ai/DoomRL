@@ -1,3 +1,4 @@
+from __future__ import division
 import numpy as np
 from random import sample
 
@@ -63,9 +64,40 @@ class ReplayBuffer(object):
 def basic_env(moves='constant-7', resolution='160x120'):
     """
     Sets up an environment with a discretized action space
-    and lower resolution. 
+    and lower resolution.
     """
     env = gym.make('ppaquette/DoomDeathmatch-v0')
     env = SetResolution(resolution)(env)
     env = ToDiscrete(moves)(env)
     return env
+
+
+def decay_fn(total_iterations, output_range):
+    """
+    Returns a function that decays its outputs with respect
+    to the iterations. Useful for decreasing exploration and
+    learning rates over time.
+    """
+    first_output, last_output = output_range
+    step_update = (last_output - first_output) / total_iterations
+
+    def decay(x):
+        """ Output decays linearly with iterations. """
+        return first_output + x * step_update
+
+
+def learn_doom(agent, env, episodes=10000, render=False,
+               learning_rate_range=(.001, .0001),
+               epsilon_range=(.8, .01)):
+    """
+    Trains the agent in specified env.
+
+    episodes: the number of episodes to run.
+    """
+
+    get_epsilon = decay_fn(episodes, epsilon_range)
+    get_learning_rate = decay_fn(episodes, learning_rate_range)
+
+    for episode in xrange(episodes):
+        epsilon = get_epsilon(episode)
+        learning_rate = get_epsilon(episode)
