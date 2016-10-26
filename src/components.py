@@ -1,6 +1,11 @@
 import numpy as np
 from random import sample
 
+import gym
+import gym_pull
+import ppaquette_gym_doom
+from ppaquette_gym_doom.wrappers import SetResolution, ToDiscrete
+
 
 class ReplayBuffer(object):
     """
@@ -24,9 +29,9 @@ class ReplayBuffer(object):
         self.capacity = capacity
         self.batch_size = batch_size
 
-        self.s1 = np.zeros([capacity] + (s_shape))
-        self.s2 = np.zeros([capacity] + (s_shape))
-        self.a = np.zeros([capacity] + (a_shape))
+        self.s1 = np.zeros([capacity] + s_shape)
+        self.s2 = np.zeros([capacity] + s_shape)
+        self.a = np.zeros([capacity] + a_shape)
         self.r = np.zeros(capacity)
         self.t = np.zeros(capacity)
         self.idx = 0
@@ -53,3 +58,14 @@ class ReplayBuffer(object):
         idxs = sample(xrange(self.capacity), n)
         batch = self.s1[idxs], self.s2[idxs], self.a[idxs], self.r[idxs]
         return batch
+
+
+def basic_env(moves='constant-7', resolution='160x120'):
+    """
+    Sets up an environment with a discretized action space
+    and lower resolution. 
+    """
+    env = gym.make('ppaquette/DoomDeathmatch-v0')
+    env = SetResolution(resolution)(env)
+    env = ToDiscrete(moves)(env)
+    return env
