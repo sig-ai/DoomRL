@@ -1,6 +1,6 @@
 from __future__ import division
 import numpy as np
-from random import sample
+from random import random, sample
 
 import gym
 import gym_pull
@@ -13,51 +13,64 @@ class ReplayBuffer(object):
     Class used to sample experiences from the past for training.
     """
 
-    def __init__(self, s_shape, a_shape, capacity, batch_size=4):
+    def __init__(self, s_shape, a_shape, capacity, batch_size=32):
         """
         Initializes a replay buffer that can store `capacity`
         experience tuples.
 
-        Each experience is of the form (s1, s2, a, r, t).
+        Each experience is of the form (s1, next_ob, a, r, t).
 
-        s1 is the original state
-        a is the action taking from s1
-        r is the resulting reward
-        t is whether the state is terminal
+        `ob` is the original observation
+        `a` is the action taking from s1
+        `next_ob` is the next observation
+        `r` is the resulting reward
+        `t` is whether the state is terminal
 
-        batch_size is the defaut batch size of samples.
+        `batch_size` is the size of samples.
         """
         self.capacity = capacity
         self.batch_size = batch_size
 
-        self.s1 = np.zeros([capacity] + s_shape)
-        self.s2 = np.zeros([capacity] + s_shape)
-        self.a = np.zeros([capacity] + a_shape)
+        print s_shape
+
+        self.ob = np.zeros([capacity] + list(s_shape))
+        self.next_ob = np.zeros([capacity] + list(s_shape))
+        if a_shape is None:
+            self.a = np.zeros([capacity])
+        else:
+            self.a = np.zeros([capacity] + list(a_shape))
         self.r = np.zeros(capacity)
-        self.t = np.zeros(capacity)
+
+        self.size = 0
         self.idx = 0
 
-    def add_experience(self, s1, s2, a, r, t):
+    def add_experience(self, ob, next_ob, a, r):
         """
         Adds an experience tuple to the ReplayBuffer.
         """
         idx = self.idx
-        self.s1[idx] = s1
-        self.s2[idx] = s2
+        self.ob[idx] = ob
+        self.next_ob[idx] = next_ob
         self.a[idx] = a
         self.r[idx] = r
-        self.t[idx] = t
         self.idx = (idx + 1) % self.capacity
+        self.size = max(self.idx, self.size)
 
-    def sample(self, n=None):
+    def filled(self):
+        """
+        Returns whether the ReplayBuffer has at least `batch_size` 
+        experiences.
+        """
+        return self.size > self.batch_size
+
+    def sample(self):
         """
         Produces a batch of experiences.
-
-        If `n` is not specified, will use the default batch size.
         """
-        n = n or self.batch_size
-        idxs = sample(xrange(self.capacity), n)
-        batch = self.s1[idxs], self.s2[idxs], self.a[idxs], self.r[idxs]
+        assert(self.filled())
+        n = self.batch_size
+        idxs = sample(xrange(self.size), n)
+        batch = self.ob[idxs], self.next_ob[idxs], self.a[idxs], self.r[idxs]
         return batch
 
 
@@ -84,9 +97,23 @@ def decay_fn(total_iterations, output_range):
     def decay(x):
         """ Output decays linearly with iterations. """
         return first_output + x * step_update
+    return decay
+
+
+def eps_greedy(eps, ob, agent, env):
+    """
+    With probability `eps`, it will sample a random move.
+
+    Otherwise, returns the agents usual action.
+    """
+    if random() < eps:
+        return env.action_space.sample()
+    return agent.act(ob)
 
 
 def learn_doom(agent, env, episodes=10000, render=False,
+               frame_skip=1, replay_buffer_size=500,
+               logdir='/tmp/doom-agent-results',
                learning_rate_range=(.001, .0001),
                epsilon_range=(.8, .01)):
     """
@@ -95,9 +122,37 @@ def learn_doom(agent, env, episodes=10000, render=False,
     episodes: the number of episodes to run.
     """
 
+    env.monitor.start(logdir, force=True, seed=0)
+    print("Outputting results to {0}".format(logdir))
+
+    rb = ReplayBuffer(env.observation_space.shape, None, replay_buffer_size)
     get_epsilon = decay_fn(episodes, epsilon_range)
     get_learning_rate = decay_fn(episodes, learning_rate_range)
+    # show = lambda: env.render() if render else None
+    show = lambda: None
 
     for episode in xrange(episodes):
         epsilon = get_epsilon(episode)
         learning_rate = get_learning_rate(episode)
+
+        done = False     # Whether the current episode concluded
+        prev_ob = None   # The previous observation
+        ob = env.reset()  # The current observation
+        while not done:
+            action = eps_greedy(epsilon, ob, agent, env)
+            total_reward = 0
+            for _ in xrange(frame_skip):
+                if done:
+                    break
+                show()
+                next_ob, reward, done, _ = env.step(action)
+                total_reward += reward
+
+            if prev_ob is not None:
+                rb.add_experience(ob, next_ob, action, total_reward)
+            ob = next_ob
+
+            if rb.filled():
+                agent.learn(rb.sample(), learning_rate)
+
+    env.monitor.close()
