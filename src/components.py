@@ -145,9 +145,10 @@ def learn_doom(agent, env, episodes=10000, render=False, frame_skip=1,
                     break
                 show()
                 next_ob, reward, done, _ = env.step(action)
-                action_reward += reward + -1 if done else 0
-            
-            rb.add_experience(ob, next_ob, action, action_reward)
+                action_reward += reward
+
+            death_reward = -1 if done else 0
+            rb.add_experience(ob, next_ob, action, action_reward + death_reward)
             ob = next_ob
 
             if rb.filled():
