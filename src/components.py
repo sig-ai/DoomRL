@@ -31,8 +31,6 @@ class ReplayBuffer(object):
         self.capacity = capacity
         self.batch_size = batch_size
 
-        print s_shape
-
         self.ob = np.zeros([capacity] + list(s_shape))
         self.next_ob = np.zeros([capacity] + list(s_shape))
         if a_shape is None:
@@ -55,7 +53,7 @@ class ReplayBuffer(object):
         self.r[idx] = r
         self.idx = (idx + 1) % self.capacity
         self.size = max(self.idx, self.size)
-        
+
     def filled(self):
         """
         Returns whether the ReplayBuffer has at least `batch_size` 
@@ -111,11 +109,10 @@ def eps_greedy(eps, ob, agent, env):
     return agent.act(ob)
 
 
-def learn_doom(agent, env, episodes=10000, render=False,
-               frame_skip=1, replay_buffer_size=500,
+def learn_doom(agent, env, episodes=10000, render=False, frame_skip=1,
+               replay_buffer_size=500, batch_size=32,
                logdir='/tmp/doom-agent-results',
-               learning_rate_range=(.001, .0001),
-               epsilon_range=(.8, .01)):
+               learning_rate_range=(.001, .0001), epsilon_range=(.8, .01)):
     """
     Trains the agent in specified env.
 
@@ -125,33 +122,35 @@ def learn_doom(agent, env, episodes=10000, render=False,
     env.monitor.start(logdir, force=True, seed=0)
     print("Outputting results to {0}".format(logdir))
 
-    rb = ReplayBuffer(env.observation_space.shape, None, replay_buffer_size)
+    rb = ReplayBuffer(env.observation_space.shape, None, replay_buffer_size,
+                      batch_size)
     get_epsilon = decay_fn(episodes, epsilon_range)
     get_learning_rate = decay_fn(episodes, learning_rate_range)
-    # show = lambda: env.render() if render else None
-    show = lambda: None
-
+    show = lambda: env.render() if render else None
+    
     for episode in xrange(episodes):
+        print("Episode {0}\n".format(episode))
         epsilon = get_epsilon(episode)
         learning_rate = get_learning_rate(episode)
 
         done = False     # Whether the current episode concluded
         prev_ob = None   # The previous observation
         ob = env.reset()  # The current observation
+        total_reward = 0
         while not done:
             action = eps_greedy(epsilon, ob, agent, env)
-            total_reward = 0
+            action_reward = 0
             for _ in xrange(frame_skip):
                 if done:
                     break
                 show()
                 next_ob, reward, done, _ = env.step(action)
-                total_reward += reward
+                action_reward += reward
 
             rb.add_experience(ob, next_ob, action, total_reward)
             ob = next_ob
 
             if rb.filled():
-                agent.learn(rb.sample(), learning_rate)
-
+                agent.learn(rb.sample())
+        print("Reward in episode {0}: {1}".format(episode, total_reward))
     env.monitor.close()
