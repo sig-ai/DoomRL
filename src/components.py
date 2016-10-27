@@ -55,7 +55,7 @@ class ReplayBuffer(object):
         self.r[idx] = r
         self.idx = (idx + 1) % self.capacity
         self.size = max(self.idx, self.size)
-
+        
     def filled(self):
         """
         Returns whether the ReplayBuffer has at least `batch_size` 
@@ -148,8 +148,7 @@ def learn_doom(agent, env, episodes=10000, render=False,
                 next_ob, reward, done, _ = env.step(action)
                 total_reward += reward
 
-            if prev_ob is not None:
-                rb.add_experience(ob, next_ob, action, total_reward)
+            rb.add_experience(ob, next_ob, action, total_reward)
             ob = next_ob
 
             if rb.filled():
