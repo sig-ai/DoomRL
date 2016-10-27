@@ -29,11 +29,13 @@ class DQAgent(object):
                 net = slim.conv2d(net, num_outputs)
         net = slim.flatten(net)
         with slim.arg_scope([slim.fully_connected],
-                            weights_initializer=slim.xavier_initializer()):
+                            weights_initializer=slim.xavier_initializer(),
+                            biases_initializer=tf.zeros_initializer):
             for units in num_units:
                 net = slim.fully_connected(net, units)
                 net = nn.relu(net)
-            self.q_values = slim.fully_connected(net, self.num_actions)
+            self.q_values = slim.fully_connected(net, self.num_actions,
+                                                 weights_initializer=tf.zeros_initializer)
 
         self.q_targets = tf.placeholder(tf.float32, [None, self.num_actions])
         self.loss = tf.reduce_mean((self.q_targets - self.q_values)**2)
@@ -52,7 +54,7 @@ class DQAgent(object):
         ob, ob_next, a, r = batch
         q_values = self.Q(ob)
         q_targets = q_values.copy()
-        q_targets[np.arange(batch_size), a] = r + self.discount_factor * \
+        q_targets[np.arange(batch_size), a.astype(int)] = r + self.discount_factor * \
             np.max(self.Q(ob_next), 1)
         self.sess.run([self.loss, self.train_step], {
             self.obs: ob, self.q_targets: q_targets})
