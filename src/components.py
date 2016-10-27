@@ -18,10 +18,10 @@ class ReplayBuffer(object):
         Initializes a replay buffer that can store `capacity`
         experience tuples.
 
-        Each experience is of the form (s1, next_ob, a, r, t).
+        Each experience is of the form (ob, next_ob, a, r, t).
 
         `ob` is the original observation
-        `a` is the action taking from s1
+        `a` is the action taking from ob
         `next_ob` is the next observation
         `r` is the resulting reward
         `t` is whether the state is terminal
@@ -145,9 +145,9 @@ def learn_doom(agent, env, episodes=10000, render=False, frame_skip=1,
                     break
                 show()
                 next_ob, reward, done, _ = env.step(action)
-                action_reward += reward
-
-            rb.add_experience(ob, next_ob, action, total_reward)
+                action_reward += reward + -1 if done else 0
+            
+            rb.add_experience(ob, next_ob, action, action_reward)
             ob = next_ob
 
             if rb.filled():
