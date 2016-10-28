@@ -1,6 +1,5 @@
 from __future__ import division
 import numpy as np
-from common import decay_fn
 
 import gym
 import gym_pull
@@ -19,10 +18,9 @@ def basic_env(moves='constant-7', resolution='160x120'):
 
 
 def learn_doom(agent, env, actor, learner, episodes=10000, render=False, frame_skip=1,
-               logdir='/tmp/doom-agent-results',
-               learning_rate_range=(.001, .0001)):
+        logdir='/tmp/doom-agent-results'):
     """
-    Trains the agent in specified env.
+    Trains using the actor function and learner function in specified env.
 
     episodes: the number of episodes to run.
     """
@@ -30,12 +28,10 @@ def learn_doom(agent, env, actor, learner, episodes=10000, render=False, frame_s
     env.monitor.start(logdir, force=True, seed=0)
     print("Outputting results to {0}".format(logdir))
 
-    get_learning_rate = decay_fn(episodes, learning_rate_range)
     show = lambda: env.render() if render else None
     
     for episode in xrange(episodes):
         print("Episode {0}\n".format(episode))
-        learning_rate = get_learning_rate(episode)
 
         done = False     # Whether the current episode concluded
         prev_ob = None   # The previous observation
