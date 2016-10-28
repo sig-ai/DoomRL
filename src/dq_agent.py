@@ -49,9 +49,8 @@ class DQAgent(object):
         q_values = self.q_values.eval({self.obs: obs}, self.sess)
         return q_values
 
-    def learn(self, batch):
-        batch_size = len(batch[0])
-        ob, ob_next, a, r = batch
+    def learn(self, ob, ob_next, a, r):
+        batch_size = len(ob)
         q_values = self.Q(ob)
         q_targets = q_values.copy()
         q_targets[np.arange(batch_size), a.astype(int)] = r + self.discount_factor * \
@@ -59,6 +58,12 @@ class DQAgent(object):
         self.sess.run([self.loss, self.train_step], {
             self.obs: ob, self.q_targets: q_targets})
 
-    def act(self, obs):
+    def act(self, obs, env, episode):
         q_values = self.Q([obs])
         return np.argmax(q_values)
+
+    def get_actor(self):
+        return lambda x,y,z: self.act(x,y,z)
+
+    def get_learner(self):
+        return lambda w, x, y, z: self.learn(w, x, y, z)
