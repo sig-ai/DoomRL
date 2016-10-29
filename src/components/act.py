@@ -1,7 +1,7 @@
 from __future__ import division
 import numpy as np
 from random import random, sample
-from common import decay_fn
+from .common import decay_fn
 
 def eps_greedy(input_actor, episodes, epsilon_range=(.8, .01)):
     """

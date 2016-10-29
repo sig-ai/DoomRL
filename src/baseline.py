@@ -1,5 +1,8 @@
 import logging
-from components import learn_doom, basic_env, eps_greedy, ReplayBuffer
+from components.general import learn_doom
+from components.learn import ReplayBuffer
+from components.act import eps_greedy
+from components.general import basic_env
 
 from dq_agent import DQAgent
 

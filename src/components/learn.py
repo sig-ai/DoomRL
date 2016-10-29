@@ -61,7 +61,7 @@ class ReplayBuffer(object):
         """
         assert(self.filled())
         n = self.batch_size
-        idxs = sample(xrange(self.size), n)
+        idxs = sample(range(self.size), n)
         batch = self.ob[idxs], self.next_ob[idxs], self.a[idxs], self.r[idxs]
         return batch
 

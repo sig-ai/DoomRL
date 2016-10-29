@@ -30,7 +30,7 @@ def learn_doom(agent, env, actor, learner, episodes=10000, render=False, frame_s
 
     show = lambda: env.render() if render else None
     
-    for episode in xrange(episodes):
+    for episode in range(episodes):
         print("Episode {0}\n".format(episode))
 
         done = False     # Whether the current episode concluded
@@ -40,7 +40,7 @@ def learn_doom(agent, env, actor, learner, episodes=10000, render=False, frame_s
         while not done:
             action = actor(ob, env, episode)
             action_reward = 0
-            for _ in xrange(frame_skip):
+            for _ in range(frame_skip):
                 if done:
                     break
                 show()
