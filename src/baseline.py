@@ -12,7 +12,7 @@ def main():
     agent = DQAgent(env)
 
     actor = agent.get_actor()
-    actor = eps_greedy(actor, EPISODES)
+    #actor = eps_greedy(actor, EPISODES)
 
     learner = agent.get_learner()
     learner = ReplayBuffer(learner, env, REPLAY_BUFFER_CAPACITY).get_learner()
