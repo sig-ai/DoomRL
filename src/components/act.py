@@ -11,9 +11,9 @@ def eps_greedy(input_actor, episodes, epsilon_range=(.8, .01)):
     """
     get_epsilon = decay_fn(episodes, epsilon_range)
 
-    def actor(ob, env, episode):
+    def actor(ob, action_space, episode):
         eps = get_epsilon(episode)
         if random() < eps:
-            return env.action_space.sample()
-        return input_actor(ob, env, episode)
+            return action_space.sample()
+        return input_actor(ob, episode)
     return actor

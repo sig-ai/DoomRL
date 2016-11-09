@@ -1,23 +1,40 @@
 import logging
-from components import learn_doom, basic_env, eps_greedy, ReplayBuffer
+from components import learn_doom, envRunner, basic_env, eps_greedy, ReplayBuffer
 
 from dq_agent import DQAgent
+from multiprocessing import Process, Queue
 
 def main():
     EPISODES = 100000
     REPLAY_BUFFER_CAPACITY = 500
     RENDER = False
+    LOGDIR = '/tmp/doom-agent-results'
+    FRAME_SKIP = 1
 
-    env = basic_env()
-    agent = DQAgent(env)
+    envQueue = Queue()
+    myQueue  = Queue()
+
+    envQueues = {"r":envQueue, "w":myQueue}
+    myQueues  = {"r":myQueue, "w":envQueue}
+
+    envProcess = Process(target=envRunner, args=(envQueues, EPISODES, RENDER, FRAME_SKIP, LOGDIR))
+    envProcess.start()
+
+    action_space = myQueue.get()
+    observation_space = myQueue.get()
+    #env = basic_env()
+
+
+    agent = DQAgent(action_space, observation_space)
 
     actor = agent.get_actor()
     actor = eps_greedy(actor, EPISODES)
 
     learner = agent.get_learner()
-    learner = ReplayBuffer(learner, env, REPLAY_BUFFER_CAPACITY).get_learner()
+    learner = ReplayBuffer(learner, observation_space, REPLAY_BUFFER_CAPACITY).get_learner()
 
-    learn_doom(agent, env, actor, learner, episodes=EPISODES, render=RENDER)
+    spaces = {"action":action_space, "observation":observation_space}
+    learn_doom(envProcess, agent, myQueues, spaces, actor, learner, episodes=EPISODES, render=RENDER)
     
 
 if __name__=='__main__':

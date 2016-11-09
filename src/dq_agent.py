@@ -7,9 +7,9 @@ from tensorflow.contrib import losses, slim
 
 class DQAgent(object):
 
-    def __init__(self, env, discount_factor=.99):
-        self.num_actions = env.action_space.n
-        self.obs_shape = list(env.observation_space.shape)
+    def __init__(self, action_space, observation_space, discount_factor=.99):
+        self.num_actions = action_space.n
+        self.obs_shape = list(observation_space.shape)
 
         with tf.Graph().as_default():
             net = self.make_network()
@@ -58,12 +58,12 @@ class DQAgent(object):
         self.sess.run([self.loss, self.train_step], {
             self.obs: ob, self.q_targets: q_targets})
 
-    def act(self, obs, env, episode):
+    def act(self, obs, episode):
         q_values = self.Q([obs])
         return np.argmax(q_values)
 
     def get_actor(self):
-        return lambda x,y,z: self.act(x,y,z)
+        return lambda x,y: self.act(x,y)
 
     def get_learner(self):
         return lambda w, x, y, z: self.learn(w, x, y, z)

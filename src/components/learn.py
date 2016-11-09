@@ -8,7 +8,7 @@ class ReplayBuffer(object):
     Class used to sample experiences from the past for training.
     """
 
-    def __init__(self, input_learner, env, capacity, a_shape=[], batch_size=32):
+    def __init__(self, input_learner, observation_space, capacity, a_shape=[], batch_size=32):
         """
         Initializes a replay buffer that can store `capacity`
         experience tuples.
@@ -27,7 +27,7 @@ class ReplayBuffer(object):
         self.batch_size = batch_size
         self.input_learner = input_learner
 
-        s_shape = env.observation_space.shape
+        s_shape = observation_space.shape
         self.ob = np.zeros([capacity] + list(s_shape))
         self.next_ob = np.zeros([capacity] + list(s_shape))
         self.a = np.zeros([capacity] + list(a_shape))
