@@ -7,6 +7,8 @@ import ppaquette_gym_doom
 from ppaquette_gym_doom.wrappers import SetResolution, ToDiscrete
 
 from handler import *
+from threading import Thread, Event
+from os import kill, getpid
 import signal
 import code
 
@@ -75,6 +77,15 @@ def envRunner(queues, episodes, render, frame_skip, logdir):
         print("Reward in episode {0}: {1}".format(episode, total_reward))
     env.monitor.close()
 
+def listen(listenEnable, stop):
+    while not stop.is_set():
+        if not listenEnable[0]:
+            raw_input()
+            kill(getpid(), signal.SIGUSR1)
+            listenEnable[0] = True
+
+def quitter(some, thing):
+    kill(getpid(), signal.SIGQUIT)
 
 def learn_doom(envp, agent, queues, spaces, actor, learner, episodes=10000, render=False, frame_skip=1):
     """
@@ -85,9 +96,16 @@ def learn_doom(envp, agent, queues, spaces, actor, learner, episodes=10000, rend
     render = True
 
     corrupted = False
+    listenEnable = [False]
+    stop = Event()
+    listener = Thread(target=listen, args=(listenEnable,stop))
+    listener.start()
+
     signal.signal(signal.SIGUSR1, signal_handler)
+    signal.signal(signal.SIGINT, quitter)
     
     for episode in xrange(episodes):
+        
         done = False     # Whether the current episode concluded
         while not done:
             print "running"
