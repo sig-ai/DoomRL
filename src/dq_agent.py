@@ -18,7 +18,7 @@ class ReplayBuffer(object):
     """
 
     def __init__(self, ob_shape, num_actions,  
-                 capacity=100000,batch_size=32):
+                 capacity=100000,batch_size=128):
         """
         Initializes a replay buffer that can store `capacity`
         experience tuples.
@@ -121,9 +121,10 @@ class DQAgent(object):
         return action
         
 
-    def learn(self, ob, a, r, t):
+    def learn(self, ob, a, r, t, updates=4):
         self.mem.add_experience(ob,a,r,t)
-        self._update_model()
+        for _ in xrange(updates):
+            self._update_model()
     
     def _update_model(self):
         if self.mem.ready():

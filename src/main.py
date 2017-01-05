@@ -126,8 +126,7 @@ def load_agent(fname = 'model.h5'):
   
 def run_atari(agent=None, env = gym.make('Breakout-v0'), eps = 5):
     if agent ==None:
-        net = make_net([84,84,2], env.action_space.n)
-        agent = DQAgent(net,env.action_space.n, [84,84,2])
+	agent = load_agent()
     for _ in xrange(eps):
         t = False
         ob = env.reset()
@@ -139,7 +138,9 @@ def run_atari(agent=None, env = gym.make('Breakout-v0'), eps = 5):
 	    print s.shape
             env.render()
             a = agent.select_action(s)
+            print(a)
             ob_next, r, t, info = env.step(a)
             prev = ob
             ob = rgb2gray(ob_next)
             ob = resize(ob, [84,84])
+run_atari()
