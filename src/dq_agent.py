@@ -5,7 +5,6 @@ import numpy as np
 import tensorflow as tf
 from tensorflow import nn
 from tensorflow.contrib import losses, slim
-from components.learn import ReplayBuffer
 from keras.layers import Input, Conv2D, Lambda
 from keras.utils.np_utils import to_categorical
 import numpy as np
@@ -78,7 +77,7 @@ class ReplayBuffer(object):
 
 from skimage.color import rgb2gray
 from skimage.transform import resize
-from ppaquette_gym_doom.wrappers import SetResolution, ToDiscrete, SetPlayingMode
+#from ppaquette_gym_doom.wrappers import SetResolution, ToDiscrete, SetPlayingMode
 from gym.wrappers import SkipWrapper
 from keras.models import Model
 
@@ -131,9 +130,10 @@ class DQAgent(object):
             o1, o2, a, r, t = self.mem.sample()
             mask = to_categorical(a, self.num_actions)
             discounting = t + self.discount_factor * (1-t)
-            target_vals = r + self.target_a.predict([o2, mask])*discounting
+            target_vals = r + np.argmax(self.target.predict([o2, mask]),1)*discounting
             self.online_a.train_on_batch([o1,mask], target_vals)
         self.steps+=1
         if self.steps >= self.sync_steps:
+            print('syncing target/online')
             self.steps = 0
             self._sync()
