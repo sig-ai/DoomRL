@@ -1,69 +1,137 @@
+from __future__ import division
+
 import gym
 import numpy as np
 import tensorflow as tf
 from tensorflow import nn
 from tensorflow.contrib import losses, slim
+from components.learn import ReplayBuffer
+from keras.layers import Input, Conv2D, Lambda
+
+import numpy as np
+from random import sample
+
+class ReplayBuffer(object):
+    """
+    Class used to sample experiences from the past for training.
+    """
+
+    def __init__(self, ob_shape, num_actions,  
+                 capacity=100000,batch_size=32):
+        """
+        Initializes a replay buffer that can store `capacity`
+        experience tuples.
+
+        Returned experience is of the form (ob, next_ob, a, r, t).
+
+        `ob` is a given observation, and `next_ob` is the subsequent obvsersation
+        `a` is the action taken from `ob`
+        `r` is the resulting reward
+        `t` is whether the state is terminal
+
+        `batch_size` is the size of samples.
+        """
+        self.capacity = capacity
+        self.batch_size = batch_size
+        
+        self.ob = np.zeros([capacity] + list(ob_shape))
+        self.a = np.zeros(capacity)
+        self.r = np.zeros(capacity)
+        self.t = np.zeros(capacity)
+
+        self.size = 0
+        self.idx = 0
+
+    def add_experience(self, ob, a, r, t):
+        """
+        Adds an experience tuple to the ReplayBuffer.
+        """
+        idx = self.idx
+        self.ob[idx] = ob
+        self.a[idx] = a
+        self.r[idx] = r
+        self.t[idx] = t
+
+        self.idx = (idx + 1) % self.capacity
+        self.size = max(self.idx, self.size)
+
+    def ready(self):
+        """
+        Returns whether the ReplayBuffer has at least `batch_size` 
+        experiences.
+        """
+        return self.size > self.batch_size
+
+    def sample(self):
+        """
+        Produces a batch of experiences.
+        Returns `None` if  there are less than `batch_size` experiences.
+        """
+        if not (self.ready()):
+            return None
+        idxs = np.array(sample(xrange(self.size), self.batch_size))
+        batch = self.ob[idxs], self.ob[idxs+1], self.a[idxs], self.r[idxs], self.t[idxs+1]
+        return batch
+
+
+from skimage.color import rgb2gray
+from skimage.transform import resize
+from ppaquette_gym_doom.wrappers import SetResolution, ToDiscrete, SetPlayingMode
+from gym.wrappers import SkipWrapper
+from keras.models import Model
+
+def wrap_model(net, num_a):
+    mask_input = Input([num_a])
+    mask = Model(mask_input,mask_input)
+    a_vals = Merge([net, mask],  name='a_vals', output_shape=[1],
+                   mode=lambda x :K.sum(x[0]*x[1],1))
+    wrapped = Model(input = [net.input, mask.input], output = a_vals.output)
+    return wrapped
+
+
 
 
 class DQAgent(object):
 
-    def __init__(self, action_space, observation_space, discount_factor=.99):
-        self.num_actions = action_space.n
-        self.obs_shape = list(observation_space.shape)
+    def __init__(self, model, num_actions, ob_shape, discount_factor=.99,
+                 sync_steps=1000):
+        self.num_actions = num_actions
+        self.obs_shape = ob_shape
+        self.online = model
+        self.online_a = wrap_model(self.online, self.num_actions)
+        self.target = Sequential.from_config(model.get_config())
+        self.target_a = wrap_model(self.target, self.num_actions)
+        self._sync()
 
-        with tf.Graph().as_default():
-            net = self.make_network()
         self.discount_factor = discount_factor
+        
+        self.online_a.compile('nadam', 'mse')
+        self.mem = ReplayBuffer(ob_shape, num_actions)
+        
+        self.steps = 0
+        self.sync_steps = int(sync_steps)
 
-    def make_network(self, num_filters=[32, 32, 64, 64], num_units=[256, 256]):
-        net = self.obs = tf.placeholder(
-            tf.float32, shape=[None] + self.obs_shape)
-        with slim.arg_scope([slim.conv2d],
-                            padding='SAME',
-                            kernel_size=3,
-                            stride=2,
-                            normalizer_fn=slim.batch_norm,
-                            activation_fn=nn.relu,
-                            weights_initializer=slim.xavier_initializer_conv2d()):
-            for num_outputs in num_filters:
-                net = slim.conv2d(net, num_outputs)
-        net = slim.flatten(net)
-        with slim.arg_scope([slim.fully_connected],
-                            weights_initializer=slim.xavier_initializer(),
-                            biases_initializer=tf.zeros_initializer):
-            for units in num_units:
-                net = slim.fully_connected(net, units)
-                net = nn.relu(net)
-            self.q_values = slim.fully_connected(net, self.num_actions,
-                                                 weights_initializer=tf.zeros_initializer)
+    def _sync(self):
+        self.target.set_weights(self.online.get_weights())
 
-        self.q_targets = tf.placeholder(tf.float32, [None, self.num_actions])
-        self.loss = tf.reduce_mean((self.q_targets - self.q_values)**2)
-        adam = tf.train.AdamOptimizer()
-        self.train_step = adam.minimize(self.loss)
-        self.sess = tf.Session()
-        init = tf.initialize_all_variables()
-        self.sess.run(init)
+    def select_action(self, ob):
+        q_vals = self.online.predict(np.array([ob]))
+        action=np.argmax(q_vals)
+        return action
+        
 
-    def Q(self, obs):
-        q_values = self.q_values.eval({self.obs: obs}, self.sess)
-        return q_values
-
-    def learn(self, ob, ob_next, a, r):
-        batch_size = len(ob)
-        q_values = self.Q(ob)
-        q_targets = q_values.copy()
-        q_targets[np.arange(batch_size), a.astype(int)] = r + self.discount_factor * \
-            np.max(self.Q(ob_next), 1)
-        self.sess.run([self.loss, self.train_step], {
-            self.obs: ob, self.q_targets: q_targets})
-
-    def act(self, obs, episode):
-        q_values = self.Q([obs])
-        return np.argmax(q_values)
-
-    def get_actor(self):
-        return lambda x,y: self.act(x,y)
-
-    def get_learner(self):
-        return lambda w, x, y, z: self.learn(w, x, y, z)
+    def learn(self, ob, a, r, t):
+        self.mem.add_experience(ob,a,r,t)
+        self._update_model()
+    
+    def _update_model(self):
+        if self.mem.ready():
+            o1, o2, a, r, t = self.mem.sample()
+            mask = to_categorical(a, self.num_actions)
+            discounting = t + self.discount_factor * (1-t)
+            target_vals = r + self.target_a.predict([o2, mask])*discounting
+            self.online_a.train_on_batch([o1,mask], target_vals)
+        self.steps+=1
+        if self.steps >= self.sync_steps:
+            self.steps = 0
+            self._sync()
