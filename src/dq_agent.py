@@ -95,7 +95,7 @@ def wrap_model(net, num_a):
 class DQAgent(object):
 
     def __init__(self, model, num_actions, ob_shape, discount_factor=.99,
-                 sync_steps=1000):
+                 sync_steps=1000, warmup_steps=10000):
         self.num_actions = num_actions
         self.obs_shape = ob_shape
         self.online = model
@@ -105,13 +105,13 @@ class DQAgent(object):
         self._sync()
 
         self.discount_factor = discount_factor
-        
+        self.warmed_up = False
         self.online_a.compile('nadam', 'mse')
         self.mem = ReplayBuffer(ob_shape, num_actions)
         
         self.steps = 0
         self.sync_steps = int(sync_steps)
-
+        self.warmup_steps = warmup_steps
     def _sync(self):
         self.target.set_weights(self.online.get_weights())
 
@@ -127,14 +127,16 @@ class DQAgent(object):
             self._update_model()
     
     def _update_model(self):
-        if self.mem.ready():
+        if self.mem.ready() and self.steps > self.warmup_steps:
+            if self.warmed_up == False:
+                self.warmed_up = True
+                print "warmed up"
             o1, o2, a, r, t = self.mem.sample()
             mask = to_categorical(a, self.num_actions)
             discounting = t + self.discount_factor * (1-t)
             target_vals = r + np.argmax(self.target.predict(o2),1)*discounting
             self.online_a.train_on_batch([o1,mask], target_vals)
         self.steps+=1
-        if self.steps >= self.sync_steps:
+        if self.steps % self.sync_steps == 0:
             print('syncing target/online')
-            self.steps = 0
             self._sync()
