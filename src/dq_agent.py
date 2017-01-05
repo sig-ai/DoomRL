@@ -130,7 +130,7 @@ class DQAgent(object):
             o1, o2, a, r, t = self.mem.sample()
             mask = to_categorical(a, self.num_actions)
             discounting = t + self.discount_factor * (1-t)
-            target_vals = r + np.argmax(self.target.predict([o2, mask]),1)*discounting
+            target_vals = r + np.argmax(self.target.predict(o2),1)*discounting
             self.online_a.train_on_batch([o1,mask], target_vals)
         self.steps+=1
         if self.steps >= self.sync_steps:
