@@ -126,7 +126,7 @@ def load_agent(fname = 'model.h5'):
     net = make_net([84,84,2], n)
     return DQAgent(net, n, [84,84,2])
   
-def run_atari(agent=None, env = gym.make('Breakout-v0'), eps = 5, render=True):
+def run_atari(agent=None, env = gym.make('Breakout-v0'), eps = 5, render=True, max_steps=1000):
     if agent ==None:
 	agent = load_agent()
     for _ in xrange(eps):
@@ -136,7 +136,9 @@ def run_atari(agent=None, env = gym.make('Breakout-v0'), eps = 5, render=True):
         ob = resize(ob, [84,84])
         prev = ob
         r_total = 0
-    	while not t:
+        steps = 0
+    	while not t and steps < max_steps:
+            steps+=1
             s = np.stack([prev,ob],2)
 	    if render:
                 env.render()
