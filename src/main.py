@@ -94,6 +94,7 @@ def learn_atari(episodes=1, agent = None, render=True, save_steps=5, decay=10, v
     if agent == None:
         net = make_net([84,84,2], env.action_space.n)
         agent = DQAgent(net,env.action_space.n, [84,84,2])
+
     for episode in xrange(episodes):
 	if episode % save_steps == 0:
 		print 'saving net'
@@ -108,7 +109,7 @@ def learn_atari(episodes=1, agent = None, render=True, save_steps=5, decay=10, v
         total = 0
         while not t:
             s = np.stack([prev,ob],2)
-            if random() < explore_prob:
+            if random() < explore_prob or not agent.warmed_up:
                 a = env.action_space.sample()
             else:
                 a = agent.select_action(s)
