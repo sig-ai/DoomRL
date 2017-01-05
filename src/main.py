@@ -99,6 +99,7 @@ def learn_atari(episodes=1, agent = None, render=True, save_steps=5, decay=10, v
 	if episode % save_steps == 0:
 		print 'saving net'
 		net.save('model.h5')
+                run_atari(agent, env, render=False)
         ob = env.reset()
         ob = rgb2gray(ob)
         ob = resize(ob, [84,84])
@@ -125,7 +126,7 @@ def load_agent(fname = 'model.h5'):
     net = make_net([84,84,2], n)
     return DQAgent(net, n, [84,84,2])
   
-def run_atari(agent=None, env = gym.make('Breakout-v0'), eps = 5):
+def run_atari(agent=None, env = gym.make('Breakout-v0'), eps = 5, render=True):
     if agent ==None:
 	agent = load_agent()
     for _ in xrange(eps):
@@ -134,6 +135,7 @@ def run_atari(agent=None, env = gym.make('Breakout-v0'), eps = 5):
         ob = rgb2gray(ob)
         ob = resize(ob, [84,84])
         prev = ob
+        r_total = 0
     	while not t:
             s = np.stack([prev,ob],2)
 	    print s.shape
@@ -141,7 +143,9 @@ def run_atari(agent=None, env = gym.make('Breakout-v0'), eps = 5):
             a = agent.select_action(s)
             print(a)
             ob_next, r, t, info = env.step(a)
+            r_total+=r
             prev = ob
             ob = rgb2gray(ob_next)
             ob = resize(ob, [84,84])
+        print "Test Reward: {}".format(r_total)
             
