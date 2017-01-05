@@ -7,10 +7,12 @@ from tensorflow import nn
 from tensorflow.contrib import losses, slim
 from components.learn import ReplayBuffer
 from keras.layers import Input, Conv2D, Lambda
-
+from keras.utils.np_utils import to_categorical
 import numpy as np
 from random import sample
-
+from keras.layers import Merge
+from keras.models import Sequential
+import keras.backend as K
 class ReplayBuffer(object):
     """
     Class used to sample experiences from the past for training.
