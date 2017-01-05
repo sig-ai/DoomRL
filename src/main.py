@@ -143,4 +143,4 @@ def run_atari(agent=None, env = gym.make('Breakout-v0'), eps = 5):
             prev = ob
             ob = rgb2gray(ob_next)
             ob = resize(ob, [84,84])
-run_atari()
+            
