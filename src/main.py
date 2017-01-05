@@ -138,8 +138,8 @@ def run_atari(agent=None, env = gym.make('Breakout-v0'), eps = 5, render=True):
         r_total = 0
     	while not t:
             s = np.stack([prev,ob],2)
-	    print s.shape
-            env.render()
+	    if render:
+                env.render()
             a = agent.select_action(s)
             print(a)
             ob_next, r, t, info = env.step(a)
