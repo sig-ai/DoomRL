@@ -2,6 +2,8 @@ from __future__ import division
 import numpy as np
 from dq_agent import DQAgent
 import gym
+import tensorflow as tf
+tf.python.control_flow_ops = tf
 names=['ppaquette/DoomBasic-v0',            #0
        'ppaquette/DoomCorridor-v0',         #1
        'ppaquette/DoomDeathmatch-v0',       #2
@@ -38,21 +40,21 @@ from keras import backend as K
 num_actions = 8
 def make_net(input_shape, num_actions):
     net = Sequential([Conv2D(32, 6, 6, input_shape=input_shape, subsample=(3,3)),
-                  # Activation('relu'),
-                  # BatchNormalization(),
-                  # Conv2D(64, 6, 6, subsample=(3,3)),
-                  # Activation('relu'),
-                  # BatchNormalization(),
-                  # Conv2D(64, 6, 6, subsample=(3,3)),
-                  # Activation('relu'),
-                  # BatchNormalization(),
+                  Activation('relu'),
+                  BatchNormalization(),
+                  Conv2D(64, 6, 6, subsample=(3,3)),
+                  Activation('relu'),
+                  BatchNormalization(),
+                  Conv2D(64, 6, 6, subsample=(3,3)),
+                  Activation('relu'),
+                  BatchNormalization(),
                   Flatten(),
-                  # Dense(512),
-                  # Activation('relu'),
-                  # BatchNormalization(),
-                  # Dense(1024),
-                  # Activation('relu'),
-                  # BatchNormalization(),
+                  Dense(512),
+                  Activation('relu'),
+                  BatchNormalization(),
+                  Dense(1024),
+                  Activation('relu'),
+                  BatchNormalization(),
                   Dense(num_actions)])
     return net
 def learn_doom(env, agent, episodes=1, render=True):
@@ -80,37 +82,64 @@ from skimage.transform import resize
 
 from math import exp
 from random import random
-
-def learn_atari(episodes=1, render=True):
+n = 6
+ob_shape = [84,84,2]
+def learn_atari(episodes=1, agent = None, render=True, save_steps=5, decay=10, verbose=True):
     """
     Trains using the actor function and learner function in specified en
 
     episodes: the number of episodes to run.
     """
     env = gym.make('Breakout-v0')
-    net = make_net([84,84,2], env.action_space.n)
-    agent = DQAgent(net,env.action_space.n, [84,84,2])
+    if agent == None:
+        net = make_net([84,84,2], env.action_space.n)
+        agent = DQAgent(net,env.action_space.n, [84,84,2])
     for episode in xrange(episodes):
+	if episode % save_steps == 0:
+		print 'saving net'
+		net.save('model.h5')
         ob = env.reset()
         ob = rgb2gray(ob)
         ob = resize(ob, [84,84])
         prev = ob
-        for ep in xrange(episodes):
-            print "Episode: {}".format(ep)
-            explore_prob = exp(-ep/10)
-            
-            t = False
-            total = 0
-            while not t:
-                s = np.stack([prev,ob],2)
-                if random() < explore_prob:
-                    a = env.action_space.sample()
+        explore_prob = exp(-episode/decay)
+        print "Episode: {0}, explore_prob:{1}".format(episode, explore_prob)
+        t = False
+        total = 0
+        while not t:
+            s = np.stack([prev,ob],2)
+            if random() < explore_prob:
+                a = env.action_space.sample()
+            else:
                 a = agent.select_action(s)
-                ob_next, r, t, info = env.step(a)
-                total+=r
-                agent.learn(s,a,r,t)
-                prev = ob
-                ob = rgb2gray(ob_next)
-                ob = resize(ob, [84,84])
-            print "Reward: {}".format(total)
+            ob_next, r, t, info = env.step(a)
+            total+=r
+            agent.learn(s,a,r,t)
+            prev = ob
+            ob = rgb2gray(ob_next)
+            ob = resize(ob, [84,84])
+        print "Reward: {}".format(total)
 
+def load_agent(fname = 'model.h5'):
+    net = make_net([84,84,2], n)
+    return DQAgent(net, n, [84,84,2])
+  
+def run_atari(agent=None, env = gym.make('Breakout-v0'), eps = 5):
+    if agent ==None:
+        net = make_net([84,84,2], env.action_space.n)
+        agent = DQAgent(net,env.action_space.n, [84,84,2])
+    for _ in xrange(eps):
+        t = False
+        ob = env.reset()
+        ob = rgb2gray(ob)
+        ob = resize(ob, [84,84])
+        prev = ob
+    	while not t:
+            s = np.stack([prev,ob],2)
+	    print s.shape
+            env.render()
+            a = agent.select_action(s)
+            ob_next, r, t, info = env.step(a)
+            prev = ob
+            ob = rgb2gray(ob_next)
+            ob = resize(ob, [84,84])
