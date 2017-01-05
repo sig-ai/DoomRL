@@ -95,7 +95,7 @@ def wrap_model(net, num_a):
 class DQAgent(object):
 
     def __init__(self, model, num_actions, ob_shape, discount_factor=.99,
-                 sync_steps=1000, warmup_steps=10000):
+                 sync_steps=1000, warmup_steps=500000):
         self.num_actions = num_actions
         self.obs_shape = ob_shape
         self.online = model
