@@ -97,7 +97,7 @@ def wrap_model(net, num_a):
 class DQAgent(object):
 
     def __init__(self, model, num_actions, ob_shape, discount_factor=.99,
-                 sync_steps=1000, warmup_steps=500000):
+                 sync_steps=10000, warmup_steps=500000):
         self.num_actions = num_actions
         self.obs_shape = ob_shape
         self.online = model
@@ -130,9 +130,7 @@ class DQAgent(object):
     
     def _update_model(self):
         if self.mem.ready():
-            if self.warmed_up == False:
-                self.warmed_up = True
-                print "warmed up"
+            self.warmed_up=True
             o1, o2, a, r, t = self.mem.sample()
             mask = to_categorical(a, self.num_actions)
             discounting = t + self.discount_factor * (1-t)
