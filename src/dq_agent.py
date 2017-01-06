@@ -17,8 +17,8 @@ class ReplayBuffer(object):
     Class used to sample experiences from the past for training.
     """
 
-    def __init__(self, ob_shape, num_actions,  
-                 capacity=100000,batch_size=128):
+    def __init__(self, ob_shape, num_actions, warmup_steps = 10000,
+                 capacity=1000000,batch_size=128):
         """
         Initializes a replay buffer that can store `capacity`
         experience tuples.
@@ -41,6 +41,8 @@ class ReplayBuffer(object):
         self.t = np.zeros(capacity)
 
         self.size = 0
+        assert(warmup_steps <= capacity)
+        self.warmup_steps = warmup_steps
         self.idx = 0
 
     def add_experience(self, ob, a, r, t):
@@ -61,7 +63,7 @@ class ReplayBuffer(object):
         Returns whether the ReplayBuffer has at least `batch_size` 
         experiences.
         """
-        return self.size > self.batch_size
+        return self.size > max(self.batch_size, warmup_steps)
 
     def sample(self):
         """
@@ -127,7 +129,7 @@ class DQAgent(object):
             self._update_model()
     
     def _update_model(self):
-        if self.mem.ready() and self.steps > self.warmup_steps:
+        if self.mem.ready():
             if self.warmed_up == False:
                 self.warmed_up = True
                 print "warmed up"
