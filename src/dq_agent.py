@@ -18,7 +18,7 @@ class ReplayBuffer(object):
     """
 
     def __init__(self, ob_shape, num_actions, warmup_steps = 10000,
-                 capacity=500000,batch_size=128):
+                 capacity=100000,batch_size=128):
         """
         Initializes a replay buffer that can store `capacity`
         experience tuples.
