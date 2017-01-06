@@ -63,7 +63,7 @@ class ReplayBuffer(object):
         Returns whether the ReplayBuffer has at least `batch_size` 
         experiences.
         """
-        return self.size > max(self.batch_size, warmup_steps)
+        return self.size > max(self.batch_size, self.warmup_steps)
 
     def sample(self):
         """
