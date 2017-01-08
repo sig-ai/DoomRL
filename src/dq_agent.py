@@ -132,7 +132,7 @@ class DQAgent(object):
         self.steps += 1
         if self.steps % self.steps_per_update == 0:
             self._update_model()
-        if self.steps % sync_steps == 0:
+        if self.steps % self.sync_steps == 0:
             print('Syncing target/online')
             self._sync()
 
