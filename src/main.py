@@ -3,6 +3,7 @@ import numpy as np
 from dq_agent import DQAgent
 import gym
 import tensorflow as tf
+from gym.wrappers import SkipWrapper
 tf.python.control_flow_ops = tf
 names=['ppaquette/DoomBasic-v0',            #0
        'ppaquette/DoomCorridor-v0',         #1
@@ -39,22 +40,19 @@ from keras.utils.np_utils import to_categorical
 from keras import backend as K
 num_actions = 8
 def make_net(input_shape, num_actions):
-    net = Sequential([Conv2D(32, 8, 8, input_shape=input_shape, subsample=(2,2)),
+    net = Sequential([Conv2D(32, 8, 8, input_shape=input_shape, subsample=(4,4)),
                   Activation('relu'),
                   BatchNormalization(),
-                  Conv2D(64, 6, 6, subsample=(1,1)),
+                  Conv2D(64, 4, 4, subsample=(2,2)),
                   Activation('relu'),
-                  # BatchNormalization(),
-                  # Conv2D(64, 4, 4, subsample=(3,3)),
-                  # Activation('relu'),
+                  BatchNormalization(),
+                  Conv2D(64, 3, 3, subsample=(3,3)),
+                  Activation('relu'),
                   BatchNormalization(),
                   Flatten(),
                   Dense(512),
                   Activation('relu'),
-                  # BatchNormalization(),
-                  # Dense(1024),
-                  # Activation('relu'),
-                  # BatchNormalization(),
+                  BatchNormalization(),
                   Dense(num_actions)])
     return net
 def learn_doom(env, agent, episodes=1, render=True):
@@ -85,7 +83,7 @@ from random import random
 n = 6
 ob_shape = [84,84,2]
 game = 'Pong-v0'
-def learn_atari(episodes=1, agent = None, render=True, save_steps=5, decay=10, verbose=True):
+def learn_atari(episodes=1, agent = None, render=True, save_steps=1000, decay=500, verbose=True):
     """
     Trains using the actor function and learner function in specified en
 
@@ -128,6 +126,7 @@ def load_agent(fname = 'model.h5'):
     return DQAgent(net, n, [84,84,2])
   
 def run_atari(agent=None, env = gym.make(game), eps = 5, render=True, max_steps=1000):
+    env = SkipWrapper(3)(env)
     if agent ==None:
 	agent = load_agent()
     for _ in xrange(eps):
@@ -150,4 +149,3 @@ def run_atari(agent=None, env = gym.make(game), eps = 5, render=True, max_steps=
             ob = rgb2gray(ob_next)
             ob = resize(ob, [84,84])
         print "Test Reward: {}".format(r_total)
-            
