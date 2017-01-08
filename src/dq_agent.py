@@ -117,7 +117,8 @@ class DQAgent(object):
         self.steps = 0
         self.sync_steps = int(sync_steps)
         self.warmup_steps = warmup_steps
-
+        self.steps_per_update = 4
+        
     def _sync(self):
         self.target.set_weights(self.online.get_weights())
 
