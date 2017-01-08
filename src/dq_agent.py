@@ -19,7 +19,7 @@ class ReplayBuffer(object):
     Class used to sample experiences from the past for training.
     """
 
-    def __init__(self, ob_shape, num_actions, warmup_steps=10000,
+    def __init__(self, ob_shape, num_actions, warmup_steps=50000,
                  capacity=100000, batch_size=128):
         """
         Initializes a replay buffer that can store `capacity`
@@ -144,5 +144,5 @@ class DQAgent(object):
             mask = to_categorical(a, self.num_actions)
             discounting = t + self.discount_factor * (1 - t)
             target_vals = r + \
-                np.argmax(self.target.predict(o2), 1) * discounting
+                np.max(self.target.predict(o2), 1) * discounting
             self.online_a.train_on_batch([o1, mask], target_vals)
