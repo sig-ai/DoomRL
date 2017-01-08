@@ -12,13 +12,15 @@ from random import sample
 from keras.layers import Merge
 from keras.models import Sequential
 import keras.backend as K
+
+
 class ReplayBuffer(object):
     """
     Class used to sample experiences from the past for training.
     """
 
-    def __init__(self, ob_shape, num_actions, warmup_steps = 10000,
-                 capacity=100000,batch_size=128):
+    def __init__(self, ob_shape, num_actions, warmup_steps=10000,
+                 capacity=100000, batch_size=128):
         """
         Initializes a replay buffer that can store `capacity`
         experience tuples.
@@ -34,7 +36,7 @@ class ReplayBuffer(object):
         """
         self.capacity = capacity
         self.batch_size = batch_size
-        
+
         self.ob = np.zeros([capacity] + list(ob_shape))
         self.a = np.zeros(capacity)
         self.r = np.zeros(capacity)
@@ -73,31 +75,30 @@ class ReplayBuffer(object):
         if not (self.ready()):
             return None
         idxs = np.array(sample(xrange(self.size), self.batch_size))
-        batch = self.ob[idxs], self.ob[idxs+1], self.a[idxs], self.r[idxs], self.t[idxs+1]
+        batch = self.ob[idxs], self.ob[
+            idxs + 1], self.a[idxs], self.r[idxs], self.t[idxs + 1]
         return batch
 
 
 from skimage.color import rgb2gray
 from skimage.transform import resize
-#from ppaquette_gym_doom.wrappers import SetResolution, ToDiscrete, SetPlayingMode
-from gym.wrappers import SkipWrapper
+
 from keras.models import Model
+from keras.optimizers import RMSprop
 
 def wrap_model(net, num_a):
     mask_input = Input([num_a])
-    mask = Model(mask_input,mask_input)
+    mask = Model(mask_input, mask_input)
     a_vals = Merge([net, mask],  name='a_vals', output_shape=[1],
-                   mode=lambda x :K.sum(x[0]*x[1],1))
-    wrapped = Model(input = [net.input, mask.input], output = a_vals.output)
+                   mode=lambda x: K.sum(x[0] * x[1], 1))
+    wrapped = Model(input=[net.input, mask.input], output=a_vals.output)
     return wrapped
-
-
 
 
 class DQAgent(object):
 
     def __init__(self, model, num_actions, ob_shape, discount_factor=.99,
-                 sync_steps=10000, warmup_steps=500000):
+                 sync_steps=10000, warmup_steps=50000, steps_per_update=4):
         self.num_actions = num_actions
         self.obs_shape = ob_shape
         self.online = model
@@ -108,35 +109,39 @@ class DQAgent(object):
 
         self.discount_factor = discount_factor
         self.warmed_up = False
+        op = RMSprop(lr=0.00025)
+
         self.online_a.compile('nadam', 'mse')
         self.mem = ReplayBuffer(ob_shape, num_actions)
-        
+
         self.steps = 0
         self.sync_steps = int(sync_steps)
         self.warmup_steps = warmup_steps
+
     def _sync(self):
         self.target.set_weights(self.online.get_weights())
 
     def select_action(self, ob):
         q_vals = self.online.predict(np.array([ob]))
-        action=np.argmax(q_vals)
+        action = np.argmax(q_vals)
         return action
-        
 
     def learn(self, ob, a, r, t, updates=4):
-        self.mem.add_experience(ob,a,r,t)
-        for _ in xrange(updates):
+        self.mem.add_experience(ob, a, r, t)
+        self.steps += 1
+        if self.steps % self.steps_per_update == 0:
             self._update_model()
-    
+        if self.steps % sync_steps == 0:
+            print('Syncing target/online')
+            self._sync()
+
     def _update_model(self):
         if self.mem.ready():
-            self.warmed_up=True
+            self.warmed_up = True
             o1, o2, a, r, t = self.mem.sample()
+            r = np.clip(r, -1, 1)
             mask = to_categorical(a, self.num_actions)
-            discounting = t + self.discount_factor * (1-t)
-            target_vals = r + np.argmax(self.target.predict(o2),1)*discounting
-            self.online_a.train_on_batch([o1,mask], target_vals)
-        self.steps+=1
-        if self.steps % self.sync_steps == 0:
-            print('syncing target/online')
-            self._sync()
+            discounting = t + self.discount_factor * (1 - t)
+            target_vals = r + \
+                np.argmax(self.target.predict(o2), 1) * discounting
+            self.online_a.train_on_batch([o1, mask], target_vals)
