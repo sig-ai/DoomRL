@@ -83,7 +83,8 @@ from random import random
 n = 6
 ob_shape = [84,84,2]
 game = 'Pong-v0'
-def learn_atari(episodes=1, agent = None, render=True, save_steps=1000, decay=500, verbose=True):
+def learn_atari(episodes=1, agent = None, render=True, save_steps=500,
+                run_steps=100, decay=500, verbose=True):
     """
     Trains using the actor function and learner function in specified en
 
@@ -95,10 +96,12 @@ def learn_atari(episodes=1, agent = None, render=True, save_steps=1000, decay=50
         agent = DQAgent(net,env.action_space.n, [84,84,2])
 
     for episode in xrange(episodes):
+        if episode % run_steps == 0:
+            print('Test Run')
+            run_atari(agent, env, render=False)
 	if episode % save_steps == 0:
 		print 'saving net'
 		net.save('model.h5')
-                run_atari(agent, env, render=False)
         ob = env.reset()
         ob = rgb2gray(ob)
         ob = resize(ob, [84,84])
