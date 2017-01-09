@@ -91,6 +91,7 @@ def learn_atari(episodes=1, agent = None, render=True, save_steps=500,
     episodes: the number of episodes to run.
     """
     env = gym.make(game)
+    env = SkipWrapper(env)
     if agent == None:
         net = make_net([84,84,2], env.action_space.n)
         agent = DQAgent(net,env.action_space.n, [84,84,2])
@@ -129,7 +130,6 @@ def load_agent(fname = 'model.h5'):
     return DQAgent(net, n, [84,84,2])
   
 def run_atari(agent=None, env = gym.make(game), eps = 5, render=True, max_steps=1000):
-    env = SkipWrapper(3)(env)
     if agent ==None:
 	agent = load_agent()
     for _ in xrange(eps):
