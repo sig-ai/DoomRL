@@ -111,7 +111,7 @@ class DQAgent(object):
         self.warmed_up = False
         op = RMSprop(lr=0.00025)
 
-        self.online_a.compile('nadam', 'mse')
+        self.online_a.compile(op, 'mse')
         self.mem = ReplayBuffer(ob_shape, num_actions)
 
         self.steps = 0
