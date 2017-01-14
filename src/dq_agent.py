@@ -14,6 +14,8 @@ from keras.models import Sequential
 import keras.backend as K
 
 
+
+
 class ReplayBuffer(object):
     """
     Class used to sample experiences from the past for training.
@@ -122,8 +124,10 @@ class DQAgent(object):
     def _sync(self):
         self.target.set_weights(self.online.get_weights())
 
-    def select_action(self, ob):
-        q_vals = self.online.predict(np.array([ob]))
+    def select_action(self, ob, batch=False):
+        if not batch:
+            ob = [ob]
+        q_vals = self.online.predict(np.array(ob))
         action = np.argmax(q_vals)
         return action
 
@@ -139,10 +143,10 @@ class DQAgent(object):
     def _update_model(self):
         if self.mem.ready():
             self.warmed_up = True
-            o1, o2, a, r, t = self.mem.sample()
+            o1, o2, a1, r, t = self.mem.sample()
             r = np.clip(r, -1, 1)
             mask = to_categorical(a, self.num_actions)
-            discounting = t + self.discount_factor * (1 - t)
-            target_vals = r + \
-                np.max(self.target.predict(o2), 1) * discounting
+            discounting = self.discount_factor * (1 - t)
+            a2 = self.select_action(o2, batch=True)
+            target_vals = r + self.target_a.predict([o2,a2]) * discounting
             self.online_a.train_on_batch([o1, mask], target_vals)
