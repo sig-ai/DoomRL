@@ -119,6 +119,7 @@ def learn_atari(episodes=1, agent = None, render=True, save_steps=500,
         agent = DQAgent(net,env.action_space.n, [84,84,2])
 
     steps = 0
+    explore_prob = 1
     for episode in xrange(episodes):
         if episode % run_steps == 0:
             print('Test Run')
