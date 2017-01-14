@@ -105,8 +105,8 @@ n = 6
 ob_shape = [84,84,2]
 game = 'Pong-v0'
 
-def learn_atari(episodes=1, agent = None, render=True, save_steps=500,
-                run_steps=100, decay=500, verbose=True):
+def learn_atari(episodes=10000000, agent = None, render=True, save_steps=500,
+                run_steps=500, decay=decay_fn(1000000), verbose=True):
     """
     Trains using the actor function and learner function in specified en
 
