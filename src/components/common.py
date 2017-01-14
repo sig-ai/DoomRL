@@ -10,8 +10,8 @@ def decay_fn(total_iterations, output_range=[1,.1]):
     first_output, last_output = output_range
     step_update = (last_output - first_output) / total_iterations
 
-    def decay(x):
+    def decay(step):
         """ Output decays linearly with iterations. """
-        return first_output + x * step_update
+        return first_output + step * step_update
     return decay
 
