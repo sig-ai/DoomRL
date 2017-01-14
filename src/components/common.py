@@ -12,6 +12,9 @@ def decay_fn(total_iterations, output_range=[1,.1]):
 
     def decay(step):
         """ Output decays linearly with iterations. """
+        if step > total_iterations:
+            return last_output
         return first_output + step * step_update
+        
     return decay
 
