@@ -4,6 +4,8 @@ from dq_agent import DQAgent
 import gym
 import tensorflow as tf
 from gym.wrappers import SkipWrapper
+from common import decay_fn
+
 tf.python.control_flow_ops = tf
 names=['ppaquette/DoomBasic-v0',            #0
        'ppaquette/DoomCorridor-v0',         #1
@@ -83,6 +85,7 @@ from random import random
 n = 6
 ob_shape = [84,84,2]
 game = 'Pong-v0'
+
 def learn_atari(episodes=1, agent = None, render=True, save_steps=500,
                 run_steps=100, decay=500, verbose=True):
     """
@@ -96,6 +99,7 @@ def learn_atari(episodes=1, agent = None, render=True, save_steps=500,
         net = make_net([84,84,2], env.action_space.n)
         agent = DQAgent(net,env.action_space.n, [84,84,2])
 
+    steps = 0
     for episode in xrange(episodes):
         if episode % run_steps == 0:
             print('Test Run')
@@ -107,11 +111,12 @@ def learn_atari(episodes=1, agent = None, render=True, save_steps=500,
         ob = rgb2gray(ob)
         ob = resize(ob, [84,84])
         prev = ob
-        explore_prob = exp(-episode/decay)
         print "Episode: {0}, explore_prob:{1}".format(episode, explore_prob)
         t = False
         total = 0
         while not t:
+            explore_prob = decay(step)
+            steps+=1
             s = np.stack([prev,ob],2)
             if random() < explore_prob or not agent.warmed_up:
                 a = env.action_space.sample()
