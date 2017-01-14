@@ -120,7 +120,7 @@ class DQAgent(object):
         self.sync_steps = int(sync_steps)
         self.warmup_steps = warmup_steps
         self.steps_per_update = 4
-        
+
     def _sync(self):
         self.target.set_weights(self.online.get_weights())
 
@@ -145,7 +145,7 @@ class DQAgent(object):
             self.warmed_up = True
             o1, o2, a1, r, t = self.mem.sample()
             r = np.clip(r, -1, 1)
-            mask = to_categorical(a, self.num_actions)
+            mask = to_categorical(a1, self.num_actions)
             discounting = self.discount_factor * (1 - t)
             a2 = self.select_action(o2, batch=True)
             target_vals = r + self.target_a.predict([o2,a2]) * discounting
