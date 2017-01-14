@@ -135,7 +135,7 @@ def learn_atari(episodes=1, agent = None, render=True, save_steps=500,
         t = False
         total = 0
         while not t:
-            explore_prob = decay(step)
+            explore_prob = decay(steps)
             steps+=1
             s = np.stack([prev,ob],2)
             if random() < explore_prob or not agent.warmed_up:
