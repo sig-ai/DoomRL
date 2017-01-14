@@ -4,7 +4,7 @@ from dq_agent import DQAgent
 import gym
 import tensorflow as tf
 from gym.wrappers import SkipWrapper
-from componenets.common import decay_fn
+from components.common import decay_fn
 
 tf.python.control_flow_ops = tf
 names=['ppaquette/DoomBasic-v0',            #0
