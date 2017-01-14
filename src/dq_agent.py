@@ -84,7 +84,6 @@ class ReplayBuffer(object):
 
 from skimage.color import rgb2gray
 from skimage.transform import resize
-
 from keras.models import Model
 from keras.optimizers import RMSprop
 
@@ -100,7 +99,8 @@ def wrap_model(net, num_a):
 class DQAgent(object):
 
     def __init__(self, model, num_actions, ob_shape, discount_factor=.99,
-                 sync_steps=10000, warmup_steps=50000, steps_per_update=4):
+                 sync_steps=10000, warmup_steps=50000, steps_per_update=4,
+                 memory=None):
         self.num_actions = num_actions
         self.obs_shape = ob_shape
         self.online = model
@@ -114,7 +114,7 @@ class DQAgent(object):
         op = RMSprop(lr=0.00025)
 
         self.online_a.compile(op, 'mse')
-        self.mem = ReplayBuffer(ob_shape, num_actions)
+        self.mem = memory or ReplayBuffer(ob_shape, num_actions)
 
         self.steps = 0
         self.sync_steps = int(sync_steps)
@@ -128,25 +128,24 @@ class DQAgent(object):
         if not batch:
             ob = [ob]
         q_vals = self.online.predict(np.array(ob))
-        action = np.argmax(q_vals)
-        return action
+        action = np.argmax(q_vals,1)
+        return action if batch else action[0]
 
     def learn(self, ob, a, r, t, updates=4):
         self.mem.add_experience(ob, a, r, t)
         self.steps += 1
-        if self.steps % self.steps_per_update == 0:
-            self._update_model()
+        if self.steps % self.steps_per_update == 0 and self.mem.is_ready():
+            o1, o2, a1, r, t = self.mem.sample()
+            self._update_model(batch)
         if self.steps % self.sync_steps == 0:
             print('Syncing target/online')
             self._sync()
 
-    def _update_model(self):
-        if self.mem.ready():
-            self.warmed_up = True
-            o1, o2, a1, r, t = self.mem.sample()
-            r = np.clip(r, -1, 1)
-            mask = to_categorical(a1, self.num_actions)
-            discounting = self.discount_factor * (1 - t)
-            a2 = self.select_action(o2, batch=True)
-            target_vals = r + self.target_a.predict([o2,a2]) * discounting
-            self.online_a.train_on_batch([o1, mask], target_vals)
+    def _update_model(self, o1, o2, a1, r, t):
+        r = np.clip(r, -1, 1)
+        mask1 = to_categorical(a1, self.num_actions)
+        discounting = self.discount_factor * (1 - t)
+        a2 = self.select_action(o2, batch=True)
+        mask2 = to_categorical(a2, self.num_actions)
+        target_vals = r + self.target_a.predict([o2,mask2]) * discounting
+        self.online_a.train_on_batch([o1, mask1], target_vals)
