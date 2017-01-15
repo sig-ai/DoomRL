@@ -134,7 +134,7 @@ class DQAgent(object):
     def learn(self, ob, a, r, t, updates=4):
         self.mem.add_experience(ob, a, r, t)
         self.steps += 1
-        if self.steps % self.steps_per_update == 0 and self.mem.is_ready():
+        if self.steps % self.steps_per_update == 0 and self.mem.ready():
             o1, o2, a1, r, t = self.mem.sample()
             self._update_model(batch)
         if self.steps % self.sync_steps == 0:
