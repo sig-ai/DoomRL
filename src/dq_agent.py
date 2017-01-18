@@ -15,18 +15,16 @@ class DQAgent(object):
             net = self.make_network()
         self.discount_factor = discount_factor
 
-    def make_network(self, num_filters=[32, 32, 64, 64], num_units=[256, 256]):
+    def make_network(self, num_filters=[32, 64, 64], kernels=[8,4,3], strides=[4,2,1], num_units=[512]):
         net = self.obs = tf.placeholder(
             tf.float32, shape=[None] + self.obs_shape)
         with slim.arg_scope([slim.conv2d],
                             padding='SAME',
-                            kernel_size=3,
-                            stride=2,
                             normalizer_fn=slim.batch_norm,
                             activation_fn=nn.relu,
                             weights_initializer=slim.xavier_initializer_conv2d()):
-            for num_outputs in num_filters:
-                net = slim.conv2d(net, num_outputs)
+            for num_outputs, kernel, stride in zip(num_filters, kernels, strides):
+                net = slim.conv2d(net, num_outputs, kernel, stride)
         net = slim.flatten(net)
         with slim.arg_scope([slim.fully_connected],
                             weights_initializer=slim.xavier_initializer(),
@@ -39,7 +37,7 @@ class DQAgent(object):
 
         self.q_targets = tf.placeholder(tf.float32, [None, self.num_actions])
         self.loss = tf.reduce_mean((self.q_targets - self.q_values)**2)
-        adam = tf.train.AdamOptimizer()
+        adam = tf.train.RMSPropOptimizer(.00025, decay=.95, momentum=.95, epsilon=.01, )
         self.train_step = adam.minimize(self.loss)
         self.sess = tf.Session()
         init = tf.initialize_all_variables()

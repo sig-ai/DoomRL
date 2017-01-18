@@ -2,3 +2,4 @@ __pycache__
 *.pyc
 vizdoom.ini
 *.swp
+src/reward.png

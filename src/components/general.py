@@ -1,10 +1,15 @@
 from __future__ import division
-import numpy as np
 
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
+import numpy as np
 import gym
 import gym_pull
 import ppaquette_gym_doom
 from ppaquette_gym_doom.wrappers import SetResolution, ToDiscrete
+from gym.wrappers import SkipWrapper
 
 from handler import *
 from threading import Thread, Event
@@ -17,9 +22,10 @@ def basic_env(moves='constant-7', resolution='160x120'):
     Sets up an environment with a discretized action space
     and lower resolution.
     """
-    env = gym.make('ppaquette/DoomDeathmatch-v0')
+    env = gym.make('ppaquette/DoomBasic-v0')
     env = SetResolution(resolution)(env)
     env = ToDiscrete(moves)(env)
+    env = SkipWrapper(4)(env)
     return env
 
 def getFromQueue(name, queues, inputs=()):
@@ -32,12 +38,14 @@ def getFromQueue(name, queues, inputs=()):
 
 from time import sleep
 
-def envRunner(queues, episodes, render, frame_skip, logdir):
+def envRunner(queues, episodes, render, logdir):
     env = basic_env()
     queues['w'].put(env.action_space)
     queues['w'].put(env.observation_space)
 
-    
+    REC_SIZE=100
+    REC_FREQ=500
+    record = np.zeros([episodes])
 
     env.monitor.start(logdir, force=True, seed=0)
     print("Outputting results to {0}".format(logdir))
@@ -45,34 +53,36 @@ def envRunner(queues, episodes, render, frame_skip, logdir):
     show = lambda: env.render() if render else None
     
     for episode in xrange(episodes):
-        print("Episode {0}\n".format(episode))
 
         done = False     # Whether the current episode concluded
         prev_ob = None   # The previous observation
         ob = env.reset()  # The current observation
         total_reward = 0
         while not done:
-            print "Env:", "starting"
             #actor = envQueue.get()
             action = getFromQueue("action", queues, inputs=(ob,))
-            print "Env:", "got action"
 
-            action_reward = 0
-            for _ in xrange(frame_skip):
-                if done:
-                    break
-                render = queues["r"].get()
-                print "Env:", "got render"
-                #show()
-                next_ob, reward, done, _ = env.step(action)
-                print "Env:", "stepped"
-                action_reward += reward
+            if done: break
+            render = queues["r"].get()
+            next_ob, reward, done, _ = env.step(action)
 
             death_reward = -1 if done else 0
 
-            print "env:", "putting vars"
-            getFromQueue("", queues, inputs=(next_ob, action_reward, death_reward))
+            getFromQueue("", queues, inputs=(next_ob, reward, death_reward))
+            total_reward += reward + death_reward
             ob = next_ob
+
+
+        record[episode] = total_reward
+        if (episode + 1) % REC_FREQ == 0:
+            rrs = record[:episode+1].reshape([-1, REC_SIZE]).sum(axis=1)
+            plt.cla()
+            plt.clf()
+            plt.title('Reward per %d' % (REC_SIZE,))
+            plt.xlabel('Episode')
+            plt.ylabel('Reward')
+            plt.plot(rrs)
+            plt.savefig('reward.png')
 
         print("Reward in episode {0}: {1}".format(episode, total_reward))
     env.monitor.close()
@@ -87,7 +97,7 @@ def listen(listenEnable, stop):
 def quitter(some, thing):
     kill(getpid(), signal.SIGQUIT)
 
-def learn_doom(envp, agent, queues, spaces, actor, learner, episodes=10000, render=False, frame_skip=1):
+def learn_doom(envp, agent, queues, spaces, actor, learner, episodes=10000, render=False):
     """
     Trains using the actor function and learner function in specified en
 
@@ -108,33 +118,20 @@ def learn_doom(envp, agent, queues, spaces, actor, learner, episodes=10000, rend
         
         done = False     # Whether the current episode concluded
         while not done:
-            print "running"
             ob = getFromQueue("ob", queues)
-            print "got ob"
 
             while True:
                 action = actor(ob, spaces["action"], episode)
                 if not corrupted:
                     break
                 else:
-                    print "redoing actor!"
                     corrupted = False
-            print "Got action"
-            print "Putting action"
             queues["w"].put(action)
+            queues["w"].put(render)
 
-            for _ in xrange(frame_skip):
-                print "putting render"
-                queues["w"].put(render)
-
-            print "getting ob"
             next_ob = queues["r"].get()
-            print "getting a_r"
             action_reward = queues["r"].get()
-            print "getting d_r"
             death_reward = queues["r"].get()
             if(death_reward<0):
                 done = True
             #learner(ob, next_ob, action, action_reward + death_reward)
-            print "done iter"
-

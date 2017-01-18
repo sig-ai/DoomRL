@@ -3,7 +3,7 @@ import numpy as np
 from random import random, sample
 from common import decay_fn
 
-def eps_greedy(input_actor, episodes, epsilon_range=(.8, .01)):
+def eps_greedy(input_actor, episodes, epsilon_range=(1, .01)):
     """
     This takes in an actor function and returns another actor function.
     With probability `eps`, it will sample a random move.

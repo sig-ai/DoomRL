@@ -1,3 +1,5 @@
+#!/usr/bin/python2
+
 import logging
 from components import learn_doom, envRunner, basic_env, eps_greedy, ReplayBuffer
 
@@ -5,11 +7,10 @@ from dq_agent import DQAgent
 from multiprocessing import Process, Queue
 
 def main():
-    EPISODES = 100000
+    EPISODES = 1000000
     REPLAY_BUFFER_CAPACITY = 500
     RENDER = False
     LOGDIR = '/tmp/doom-agent-results'
-    FRAME_SKIP = 1
 
     envQueue = Queue()
     myQueue  = Queue()
@@ -17,7 +18,7 @@ def main():
     envQueues = {"r":envQueue, "w":myQueue}
     myQueues  = {"r":myQueue, "w":envQueue}
 
-    envProcess = Process(target=envRunner, args=(envQueues, EPISODES, RENDER, FRAME_SKIP, LOGDIR))
+    envProcess = Process(target=envRunner, args=(envQueues, EPISODES, RENDER, LOGDIR))
     envProcess.start()
 
     action_space = myQueue.get()
