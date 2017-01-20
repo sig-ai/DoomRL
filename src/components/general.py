@@ -47,7 +47,7 @@ def envRunner(queues, episodes, render, logdir):
     REC_FREQ=500
     record = np.zeros([episodes])
 
-    env.monitor.start(logdir, force=True, seed=0)
+    # env.monitor.start(logdir, force=True, seed=0)
     print("Outputting results to {0}".format(logdir))
 
     show = lambda: env.render() if render else None
@@ -83,7 +83,7 @@ def envRunner(queues, episodes, render, logdir):
             plt.savefig('reward.png')
 
         print("Reward in episode {0}: {1}".format(episode, total_reward))
-    env.monitor.close()
+    # env.monitor.close()
 
 def listen(listenEnable, stop):
     while not stop.is_set():
@@ -130,4 +130,4 @@ def learn_doom(envp, agent, queues, spaces, actor, learner, episodes=10000, rend
             next_ob = queues["r"].get()
             action_reward = queues["r"].get()
             done = queues["r"].get()
-            learner(ob, next_ob, action, action_reward)
+            learner(ob, next_ob, action, action_reward, done)
