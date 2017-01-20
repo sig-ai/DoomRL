@@ -66,10 +66,8 @@ def envRunner(queues, episodes, render, logdir):
             render = queues["r"].get()
             next_ob, reward, done, _ = env.step(action)
 
-            death_reward = -1 if done else 0
-
-            getFromQueue("", queues, inputs=(next_ob, reward, death_reward))
-            total_reward += reward + death_reward
+            getFromQueue("", queues, inputs=(next_ob, reward, done))
+            total_reward += reward
             ob = next_ob
 
 
@@ -131,7 +129,5 @@ def learn_doom(envp, agent, queues, spaces, actor, learner, episodes=10000, rend
 
             next_ob = queues["r"].get()
             action_reward = queues["r"].get()
-            death_reward = queues["r"].get()
-            if(death_reward<0):
-                done = True
-            #learner(ob, next_ob, action, action_reward + death_reward)
+            done = queues["r"].get()
+            learner(ob, next_ob, action, action_reward)

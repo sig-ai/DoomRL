@@ -7,7 +7,7 @@ from dq_agent import DQAgent
 from multiprocessing import Process, Queue
 
 def main():
-    EPISODES = 1000000
+    EPISODES = 50000
     REPLAY_BUFFER_CAPACITY = 500
     RENDER = False
     LOGDIR = '/tmp/doom-agent-results'
