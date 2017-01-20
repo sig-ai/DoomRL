@@ -72,5 +72,5 @@ class ReplayBuffer(object):
             self.add_experience(ob, next_ob, a, r, t)
             if self.filled():
                 a,b,c,d,e = self.sample()
-                self.input_learner(a,b,c,d)
+                self.input_learner(a,b,c,d,e)
         return learner
