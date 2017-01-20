@@ -32,11 +32,12 @@ class ReplayBuffer(object):
         self.next_ob = np.zeros([capacity] + list(s_shape))
         self.a = np.zeros([capacity] + list(a_shape))
         self.r = np.zeros(capacity)
+        self.t = np.zeros(capacity)
 
         self.size = 0
         self.idx = 0
 
-    def add_experience(self, ob, next_ob, a, r):
+    def add_experience(self, ob, next_ob, a, r, t):
         """
         Adds an experience tuple to the ReplayBuffer.
         """
@@ -45,6 +46,7 @@ class ReplayBuffer(object):
         self.next_ob[idx] = next_ob
         self.a[idx] = a
         self.r[idx] = r
+        self.t[idx] = t
         self.idx = (idx + 1) % self.capacity
         self.size = max(self.idx, self.size)
 
@@ -62,13 +64,13 @@ class ReplayBuffer(object):
         assert(self.filled())
         n = self.batch_size
         idxs = sample(xrange(self.size), n)
-        batch = self.ob[idxs], self.next_ob[idxs], self.a[idxs], self.r[idxs]
+        batch = self.ob[idxs], self.next_ob[idxs], self.a[idxs], self.r[idxs], self.t[idxs]
         return batch
 
     def get_learner(self):
-        def learner(ob, next_ob, a, r):
-            self.add_experience(ob, next_ob, a, r)
+        def learner(ob, next_ob, a, r, t):
+            self.add_experience(ob, next_ob, a, r, t)
             if self.filled():
-                a,b,c,d = self.sample()
+                a,b,c,d,e = self.sample()
                 self.input_learner(a,b,c,d)
         return learner
